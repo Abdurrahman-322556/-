@@ -1,0 +1,6 @@
+{
+  "name": "Windows 11 Simulator",
+  "description": "Интерактивный симулятор Windows 11 с рабочим столом, классическими системными приложениями, установкой виртуальных программ, сбросом настроек и средой восстановления WinRE.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
