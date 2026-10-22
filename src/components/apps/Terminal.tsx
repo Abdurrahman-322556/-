@@ -26,6 +26,7 @@ export const Terminal: React.FC<TerminalProps> = ({ elevationLevel = 'user' }) =
     rebootSystem,
     resetThisPC,
     settings,
+    setWinreEnabled,
     currentVersion,
     bootMode,
     bootIntoSafeMode,
@@ -494,22 +495,107 @@ SeShutdownPrivilege           Завершение работы системы  
 
       case 'sfc':
         if (arg === '/scannow') {
-          newOutput = [
-            {
-              id: `out-${Date.now()}`,
-              type: 'output',
-              text: `Начато сканирование системы. Этот процесс может занять некоторое время.
+          if (elevationLevel === 'user') {
+            newOutput = [
+              {
+                id: `out-${Date.now()}`,
+                type: 'error',
+                text: 'Для использования программы sfc необходимо быть администратором, выполняющим сеанс командной строки.',
+              },
+            ];
+          } else {
+            newOutput = [
+              {
+                id: `out-${Date.now()}`,
+                type: 'output',
+                text: `Начато сканирование системы. Этот процесс может занять некоторое время.
 
 Начало этапа проверки при сканировании системы.
 Проверка 100% завершена.
 
-Защита ресурсов Windows не обнаружила нарушений целостности. Все компоненты в норме.`,
-            },
-          ];
+Защита ресурсов Windows восстановила поврежденные файлы и успешно их исправила.
+Сведения см. в файле CBS.Log windir\\Logs\\CBS\\CBS.log. Все компоненты в норме.`,
+              },
+            ];
+          }
         } else {
           newOutput = [{ id: `out-${Date.now()}`, type: 'error', text: 'Используйте команду: sfc /scannow' }];
         }
         break;
+
+      case 'reagentc': {
+        const subArg = arg.toLowerCase().trim();
+        if (subArg === '/info' || subArg === '-info' || subArg === 'info') {
+          const isEnabled = settings.winreEnabled;
+          newOutput = [
+            {
+              id: `out-${Date.now()}`,
+              type: 'output',
+              text: `Сведения о конфигурации среды восстановления Windows (WinRE) и сброса системы:
+
+    Состояние Windows RE:         ${isEnabled ? 'Enabled (Включено)' : 'Disabled (Отключено)'}
+    Расположение Windows RE:     \\\\?\\GLOBALROOT\\device\\harddisk0\\partition4\\Recovery\\WindowsRE
+    Идентификатор данных BCD:    {4a92c36a-208b-11ef-93a8-b42e99fa38c1}
+    Расположение образа:         \\\\?\\GLOBALROOT\\device\\harddisk0\\partition4\\Recovery\\WindowsRE\\Winre.wim
+    Индекс образа:               1
+    Расположение пользовательского образа:
+    Индекс пользовательского образа:       0
+
+REAGENTC.EXE: Операция выполнена успешно.`,
+            },
+          ];
+        } else if (subArg === '/enable' || subArg === '-enable' || subArg === 'enable') {
+          if (elevationLevel === 'user') {
+            newOutput = [
+              {
+                id: `out-${Date.now()}`,
+                type: 'error',
+                text: 'REAGENTC.EXE: Операция требует наличия повышенных привилегий администратора. Запустите терминал от имени администратора.',
+              },
+            ];
+          } else {
+            setWinreEnabled(true);
+            newOutput = [
+              {
+                id: `out-${Date.now()}`,
+                type: 'success',
+                text: 'REAGENTC.EXE: Операция выполнена успешно. Среда восстановления Windows (WinRE) включена.',
+              },
+            ];
+          }
+        } else if (subArg === '/disable' || subArg === '-disable' || subArg === 'disable') {
+          if (elevationLevel === 'user') {
+            newOutput = [
+              {
+                id: `out-${Date.now()}`,
+                type: 'error',
+                text: 'REAGENTC.EXE: Операция требует наличия повышенных привилегий администратора. Запустите терминал от имени администратора.',
+              },
+            ];
+          } else {
+            setWinreEnabled(false);
+            newOutput = [
+              {
+                id: `out-${Date.now()}`,
+                type: 'output',
+                text: 'REAGENTC.EXE: Операция выполнена успешно. Среда восстановления Windows (WinRE) отключена.',
+              },
+            ];
+          }
+        } else {
+          newOutput = [
+            {
+              id: `out-${Date.now()}`,
+              type: 'output',
+              text: `Использование команды REAGENTC:
+  reagentc /info     - Отображение текущего состояния среды восстановления WinRE
+  reagentc /enable   - Включение среды восстановления Windows (требуются права администратора)
+  reagentc /disable  - Отключение среды восстановления Windows (требуются права администратора)`,
+            },
+          ];
+        }
+        break;
+      }
 
       case 'shutdown':
         if (arg.includes('/o') || arg.includes('-o')) {

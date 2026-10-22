@@ -80,6 +80,19 @@ export interface SystemSettings {
   taskbarAlignment: 'center' | 'left';
   computerName: string;
   registeredOwner: string;
+  winreEnabled: boolean;
+  language: string;
+  keyboardLayout: string;
+  timeFormat: string;
+}
+
+export interface ReinstallConfig {
+  language: string;
+  timeFormat: string;
+  keyboardLayout: string;
+  username: string;
+  computerName: string;
+  theme: 'light' | 'dark';
 }
 
 export interface RestorePoint {

@@ -141,11 +141,17 @@ export const FilePropertiesDialog: React.FC<FilePropertiesDialogProps> = ({
 
   return (
     <div
-      onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 win-acrylic select-none animate-in fade-in zoom-in-95 duration-150"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) {
+          onClose();
+        }
+      }}
+      className="fixed inset-0 z-[9999] bg-black/60 flex items-center justify-center p-4 win-acrylic select-none animate-in fade-in zoom-in-95 duration-150"
     >
       <div
         onClick={(e) => e.stopPropagation()}
+        onMouseDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
         className={`w-full max-w-lg rounded-2xl border shadow-2xl overflow-hidden font-sans text-xs ${
           isDark
             ? 'bg-zinc-900 border-zinc-700 text-zinc-100 shadow-black/80'

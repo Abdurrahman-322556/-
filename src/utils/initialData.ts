@@ -549,6 +549,10 @@ export const INITIAL_SETTINGS: SystemSettings = {
   taskbarAlignment: 'center',
   computerName: 'DESKTOP-WIN11PRO',
   registeredOwner: 'User',
+  winreEnabled: true,
+  language: 'Русский (Россия)',
+  keyboardLayout: 'Русская (Россия)',
+  timeFormat: '24 часа (Россия)',
 };
 
 export const INITIAL_RESTORE_POINTS: RestorePoint[] = [

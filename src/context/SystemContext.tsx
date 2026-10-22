@@ -14,6 +14,7 @@ import {
   UpdateProgressState,
   WindowsVersion,
   WindowState,
+  ReinstallConfig,
 } from '../types/system';
 import {
   INITIAL_APPS,
@@ -106,6 +107,8 @@ interface SystemContextType {
   bootToWinRE: () => void;
   rebootSystem: () => void;
   exitWinREToDesktop: () => void;
+  setWinreEnabled: (enabled: boolean) => void;
+  reinstallWindows: (config: ReinstallConfig) => void;
 }
 
 const SystemContext = createContext<SystemContextType | undefined>(undefined);
@@ -297,8 +300,27 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     setWindows((prev) => {
-      // Check if already open
-      const existing = prev.find((w) => w.appId === appId);
+      const appDef = apps.find((a) => a.id === appId);
+      const baseTitle = appDef ? appDef.name : appId;
+      const effectiveElevation: ElevationLevel = elevationLevel || 'user';
+      let title = baseTitle;
+
+      if (effectiveElevation === 'trustedinstaller') {
+        title = `${baseTitle} [TrustedInstaller]`;
+      } else if (effectiveElevation === 'system') {
+        title = `${baseTitle} [СИСТЕМА]`;
+      } else if (effectiveElevation === 'admin') {
+        title = `${baseTitle} [Администратор]`;
+      }
+
+      // Check if already open with same elevationLevel (or same file for notepad)
+      const existing = prev.find(
+        (w) =>
+          w.appId === appId &&
+          (w.elevationLevel || 'user') === effectiveElevation &&
+          (!customProps?.fileId || w.customProps?.fileId === customProps?.fileId)
+      );
+
       if (existing) {
         const maxZ = prev.reduce((max, w) => Math.max(max, w.zIndex), 10);
         setActiveWindowId(existing.id);
@@ -306,25 +328,14 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           w.id === existing.id
             ? {
                 ...w,
+                title,
                 isMinimized: false,
                 zIndex: maxZ + 1,
-                elevationLevel: elevationLevel || w.elevationLevel,
-                customProps: customProps || w.customProps,
+                elevationLevel: effectiveElevation,
+                customProps: customProps ? { ...w.customProps, ...customProps } : w.customProps,
               }
             : w
         );
-      }
-
-      const appDef = apps.find((a) => a.id === appId);
-      let title = appDef ? appDef.name : appId;
-      const icon = appDef ? appDef.icon : 'app';
-
-      if (elevationLevel === 'trustedinstaller') {
-        title = `${title} [TrustedInstaller]`;
-      } else if (elevationLevel === 'system') {
-        title = `${title} [СИСТЕМА]`;
-      } else if (elevationLevel === 'admin') {
-        title = `${title} [Администратор]`;
       }
 
       // Smart cascading window placement
@@ -340,17 +351,17 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
       const maxZ = prev.reduce((max, w) => Math.max(max, w.zIndex), 10);
       const newWin: WindowState = {
-        id: `win-${appId}-${Date.now()}`,
+        id: `win-${appId}-${effectiveElevation}-${Date.now()}`,
         appId,
         title,
-        icon,
+        icon: appDef ? appDef.icon : 'app',
         isMinimized: false,
         isMaximized: false,
         position: { x: posX, y: posY },
         size: { width: initialWidth, height: initialHeight },
         zIndex: maxZ + 1,
-        elevationLevel: elevationLevel || 'user',
-        customProps: { ...customProps, elevationLevel: elevationLevel || 'user' },
+        elevationLevel: effectiveElevation,
+        customProps: { ...customProps, elevationLevel: effectiveElevation },
       };
 
       setActiveWindowId(newWin.id);
@@ -809,6 +820,17 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // WinRE & System Reboot
   const bootToWinRE = useCallback(() => {
+    if (!settings.winreEnabled) {
+      if (settings.soundEnabled) {
+        playSound('error', settings.volume / 100);
+      }
+      setSecurityModal({
+        visible: true,
+        title: 'Среда восстановления Windows (WinRE) отключена',
+        message: 'Не удается запустить среду WinRE, так как она отключена (reagentc /disable). Для включения выполните команду "reagentc /enable" в командной строке от имени администратора.',
+      });
+      return;
+    }
     setWindows([]);
     if (settings.soundEnabled) {
       playSound('winre', settings.volume / 100);
@@ -817,7 +839,85 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setTimeout(() => {
       setSystemStatus('winre');
     }, 2000);
-  }, [settings.soundEnabled, settings.volume]);
+  }, [settings.winreEnabled, settings.soundEnabled, settings.volume]);
+
+  const setWinreEnabled = useCallback((enabled: boolean) => {
+    setSettings((prev) => ({ ...prev, winreEnabled: enabled }));
+  }, []);
+
+  const reinstallWindows = useCallback(
+    (config: ReinstallConfig) => {
+      setWindows([]);
+      setSystemStatus('rebooting');
+
+      // Update settings with chosen OOBE config
+      setSettings((prev) => ({
+        ...prev,
+        registeredOwner: config.username,
+        computerName: config.computerName,
+        theme: config.theme,
+        language: config.language,
+        keyboardLayout: config.keyboardLayout,
+        timeFormat: config.timeFormat,
+        winreEnabled: true,
+      }));
+
+      // Fresh user directory structure
+      setFiles([
+        ...INITIAL_FILES.filter((f) => !f.path.startsWith('C:/Users/User')),
+        {
+          id: 'c-user-home',
+          name: config.username,
+          path: `C:/Users/${config.username}`,
+          isDirectory: true,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'folder-desktop',
+          name: 'Desktop',
+          path: `C:/Users/${config.username}/Desktop`,
+          isDirectory: true,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'folder-docs',
+          name: 'Documents',
+          path: `C:/Users/${config.username}/Documents`,
+          isDirectory: true,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'folder-downloads',
+          name: 'Downloads',
+          path: `C:/Users/${config.username}/Downloads`,
+          isDirectory: true,
+          updatedAt: new Date().toISOString(),
+        },
+        {
+          id: 'file-welcome',
+          name: 'Добро пожаловать в Windows 11.txt',
+          path: `C:/Users/${config.username}/Desktop/Добро пожаловать в Windows 11.txt`,
+          isDirectory: false,
+          content: `Добро пожаловать в Windows 11!\n\nУчетная запись: ${config.username}\nИмя компьютера: ${config.computerName}\nЯзык интерфейса: ${config.language}\nРаскладка клавиатуры: ${config.keyboardLayout}\n\nСистема успешно переустановлена и настроена через среду восстановления WinRE.`,
+          size: 340,
+          updatedAt: new Date().toISOString(),
+        },
+      ]);
+
+      setTimeout(() => {
+        setSystemStatus('desktop');
+        if (settings.soundEnabled) {
+          playSound('startup', 0.8);
+        }
+        addNotification(
+          'Windows 11 успешно настроена',
+          `Добро пожаловать, ${config.username}! Чистая установка системы завершена.`,
+          'Система'
+        );
+      }, 3000);
+    },
+    [settings.soundEnabled, addNotification]
+  );
 
   const rebootSystem = useCallback(() => {
     setWindows([]);
@@ -997,6 +1097,8 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         bootToWinRE,
         rebootSystem,
         exitWinREToDesktop,
+        setWinreEnabled,
+        reinstallWindows,
       }}
     >
       {children}

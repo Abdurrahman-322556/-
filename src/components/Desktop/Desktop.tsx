@@ -38,11 +38,6 @@ import { WinverDialog } from '../apps/WinverDialog';
 import { WINDOWS_VERSIONS } from '../../utils/initialData';
 import { AppDefinition, FileSystemItem } from '../../types/system';
 
-// Dialog imports
-import { FilePropertiesDialog } from '../dialogs/FilePropertiesDialog';
-import { SecurityErrorDialog } from '../dialogs/SecurityErrorDialog';
-import { UacDialog } from '../dialogs/UacDialog';
-
 interface ContextMenuState {
   visible: boolean;
   x: number;
@@ -241,7 +236,11 @@ export const Desktop: React.FC = () => {
 
   // Marquee selection handlers
   const handlePointerDown = (e: React.PointerEvent) => {
-    if ((e.target as HTMLElement).closest('.desktop-icon') || (e.target as HTMLElement).closest('.window-frame')) {
+    if (
+      (e.target as HTMLElement).closest('.desktop-icon') ||
+      (e.target as HTMLElement).closest('.window-frame') ||
+      (e.target as HTMLElement).closest('.desktop-context-menu')
+    ) {
       return;
     }
     closeAllMenus();
@@ -278,7 +277,7 @@ export const Desktop: React.FC = () => {
     if (!openFileChecked(file.id)) return;
     if (file.isDirectory) {
       openWindow('explorer');
-    } else if (file.name.endsWith('.txt')) {
+    } else {
       openWindow('notepad', { fileId: file.id });
     }
   };
@@ -304,7 +303,7 @@ export const Desktop: React.FC = () => {
       case 'explorer':
         return <FileExplorer />;
       case 'notepad':
-        return <Notepad fileId={customProps?.fileId as string} />;
+        return <Notepad fileId={customProps?.fileId as string} elevationLevel={elevationLevel as any} />;
       case 'terminal':
         return <Terminal elevationLevel={elevationLevel as any} />;
       case 'calculator':
@@ -564,13 +563,16 @@ export const Desktop: React.FC = () => {
       {contextMenu.visible && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className={`fixed z-50 w-64 rounded-xl border shadow-2xl p-1.5 win-acrylic text-xs select-none animate-in zoom-in-95 duration-100 ${
+          onPointerDown={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+          className={`desktop-context-menu fixed z-50 w-64 rounded-xl border shadow-2xl p-1.5 win-acrylic text-xs select-none animate-in zoom-in-95 duration-100 ${
             isDark ? 'bg-zinc-800/95 border-zinc-700 text-zinc-100' : 'bg-white/95 border-slate-200 text-zinc-900'
           }`}
           style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
         >
           <button
-            onClick={handleRefresh}
+            onClick={() => handleRefresh()}
+            onContextMenu={(e) => { e.preventDefault(); handleRefresh(); }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-zinc-500/10 text-left cursor-pointer"
           >
             <RefreshCw size={14} />
@@ -585,6 +587,11 @@ export const Desktop: React.FC = () => {
               createFolder('C:/Users/User/Desktop', `Новая папка ${Math.floor(Math.random() * 100)}`);
               closeAllMenus();
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              createFolder('C:/Users/User/Desktop', `Новая папка ${Math.floor(Math.random() * 100)}`);
+              closeAllMenus();
+            }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-zinc-500/10 text-left cursor-pointer"
           >
             <Folder size={14} className="text-amber-500" />
@@ -594,6 +601,11 @@ export const Desktop: React.FC = () => {
           {/* New text doc */}
           <button
             onClick={() => {
+              createFile('C:/Users/User/Desktop', `Текстовый документ ${Math.floor(Math.random() * 100)}.txt`, '');
+              closeAllMenus();
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               createFile('C:/Users/User/Desktop', `Текстовый документ ${Math.floor(Math.random() * 100)}.txt`, '');
               closeAllMenus();
             }}
@@ -614,6 +626,11 @@ export const Desktop: React.FC = () => {
               openWindow('terminal');
               closeAllMenus();
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              openWindow('terminal');
+              closeAllMenus();
+            }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-zinc-500/10 text-left cursor-pointer"
           >
             <TerminalIcon size={14} />
@@ -622,8 +639,13 @@ export const Desktop: React.FC = () => {
 
           <button
             onClick={() => {
-              requestElevatedLaunch('terminal', 'admin');
               closeAllMenus();
+              requestElevatedLaunch('terminal', 'admin');
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              closeAllMenus();
+              requestElevatedLaunch('terminal', 'admin');
             }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 text-left font-medium cursor-pointer"
           >
@@ -633,8 +655,13 @@ export const Desktop: React.FC = () => {
 
           <button
             onClick={() => {
-              requestElevatedLaunch('terminal', 'system');
               closeAllMenus();
+              requestElevatedLaunch('terminal', 'system');
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              closeAllMenus();
+              requestElevatedLaunch('terminal', 'system');
             }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-purple-500 hover:bg-purple-500/10 text-left font-medium cursor-pointer"
           >
@@ -644,8 +671,13 @@ export const Desktop: React.FC = () => {
 
           <button
             onClick={() => {
-              requestElevatedLaunch('terminal', 'trustedinstaller');
               closeAllMenus();
+              requestElevatedLaunch('terminal', 'trustedinstaller');
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              closeAllMenus();
+              requestElevatedLaunch('terminal', 'trustedinstaller');
             }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-amber-500 hover:bg-amber-500/10 text-left font-semibold cursor-pointer"
           >
@@ -661,6 +693,11 @@ export const Desktop: React.FC = () => {
               openWindow('settings');
               closeAllMenus();
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              openWindow('settings');
+              closeAllMenus();
+            }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-zinc-500/10 text-left cursor-pointer"
           >
             <Palette size={14} />
@@ -670,6 +707,11 @@ export const Desktop: React.FC = () => {
           {/* Winver Dialog */}
           <button
             onClick={() => {
+              openWindow('winver');
+              closeAllMenus();
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               openWindow('winver');
               closeAllMenus();
             }}
@@ -689,6 +731,15 @@ export const Desktop: React.FC = () => {
                 exitSafeMode();
               }
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              closeAllMenus();
+              if (bootMode === 'normal') {
+                bootIntoSafeMode('safemode');
+              } else {
+                exitSafeMode();
+              }
+            }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg text-amber-500 hover:bg-amber-500/10 text-left font-medium cursor-pointer"
           >
             <ShieldCheck size={14} />
@@ -698,6 +749,11 @@ export const Desktop: React.FC = () => {
           {/* Boot to WinRE */}
           <button
             onClick={() => {
+              closeAllMenus();
+              bootToWinRE();
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               closeAllMenus();
               bootToWinRE();
             }}
@@ -713,7 +769,9 @@ export const Desktop: React.FC = () => {
       {fileContextMenu.visible && fileContextMenu.file && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className={`fixed z-50 w-64 rounded-xl border shadow-2xl p-1.5 win-acrylic text-xs select-none animate-in zoom-in-95 duration-100 ${
+          onPointerDown={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+          className={`desktop-context-menu fixed z-50 w-64 rounded-xl border shadow-2xl p-1.5 win-acrylic text-xs select-none animate-in zoom-in-95 duration-100 ${
             isDark ? 'bg-zinc-800/95 border-zinc-700 text-zinc-100' : 'bg-white/95 border-slate-200 text-zinc-900'
           }`}
           style={{ left: `${fileContextMenu.x}px`, top: `${fileContextMenu.y}px` }}
@@ -721,6 +779,12 @@ export const Desktop: React.FC = () => {
           {/* Open */}
           <button
             onClick={() => {
+              const f = fileContextMenu.file!;
+              closeAllMenus();
+              handleFileOpen(f);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               const f = fileContextMenu.file!;
               closeAllMenus();
               handleFileOpen(f);
@@ -733,22 +797,55 @@ export const Desktop: React.FC = () => {
 
           <div className="h-px bg-zinc-500/15 my-1" />
 
-          {/* Elevation Launch Options */}
-          <div className="px-3 py-0.5 text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
-            Запуск с правами
+          {/* Elevation Launch Options Header - Clickable for fast elevation */}
+          <div
+            onClick={() => {
+              const f = fileContextMenu.file!;
+              closeAllMenus();
+              if (f.isDirectory) {
+                requestElevatedLaunch('explorer', 'admin');
+              } else {
+                requestElevatedLaunch('notepad', 'admin', { fileId: f.id });
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const f = fileContextMenu.file!;
+              closeAllMenus();
+              if (f.isDirectory) {
+                requestElevatedLaunch('explorer', 'admin');
+              } else {
+                requestElevatedLaunch('notepad', 'admin', { fileId: f.id });
+              }
+            }}
+            className="flex items-center justify-between px-3 py-1 text-[10px] text-zinc-400 font-semibold uppercase tracking-wider hover:bg-zinc-500/10 rounded cursor-pointer group"
+            title="Быстрый запуск от имени администратора"
+          >
+            <span>Запуск с правами</span>
+            <Shield size={12} className="text-blue-400 group-hover:scale-110 transition-transform" />
           </div>
 
           <button
             onClick={() => {
               const f = fileContextMenu.file!;
               closeAllMenus();
-              if (f.name.endsWith('.txt')) {
-                requestElevatedLaunch('notepad', 'admin', { fileId: f.id });
+              if (f.isDirectory) {
+                requestElevatedLaunch('explorer', 'admin');
               } else {
-                requestElevatedLaunch('terminal', 'admin');
+                requestElevatedLaunch('notepad', 'admin', { fileId: f.id });
               }
             }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 text-left cursor-pointer"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const f = fileContextMenu.file!;
+              closeAllMenus();
+              if (f.isDirectory) {
+                requestElevatedLaunch('explorer', 'admin');
+              } else {
+                requestElevatedLaunch('notepad', 'admin', { fileId: f.id });
+              }
+            }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 text-left cursor-pointer font-medium"
           >
             <Shield size={13} />
             <span>Запуск от имени администратора</span>
@@ -758,32 +855,52 @@ export const Desktop: React.FC = () => {
             onClick={() => {
               const f = fileContextMenu.file!;
               closeAllMenus();
-              if (f.name.endsWith('.txt')) {
-                requestElevatedLaunch('notepad', 'system', { fileId: f.id });
+              if (f.isDirectory) {
+                requestElevatedLaunch('explorer', 'system');
               } else {
-                requestElevatedLaunch('terminal', 'system');
+                requestElevatedLaunch('notepad', 'system', { fileId: f.id });
               }
             }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-purple-500 hover:bg-purple-500/10 text-left cursor-pointer"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const f = fileContextMenu.file!;
+              closeAllMenus();
+              if (f.isDirectory) {
+                requestElevatedLaunch('explorer', 'system');
+              } else {
+                requestElevatedLaunch('notepad', 'system', { fileId: f.id });
+              }
+            }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-purple-500 hover:bg-purple-500/10 text-left cursor-pointer font-medium"
           >
             <ShieldAlert size={13} />
-            <span>Запуск от имени системы</span>
+            <span>Запуск от имени системы (SYSTEM)</span>
           </button>
 
           <button
             onClick={() => {
               const f = fileContextMenu.file!;
               closeAllMenus();
-              if (f.name.endsWith('.txt')) {
-                requestElevatedLaunch('notepad', 'trustedinstaller', { fileId: f.id });
+              if (f.isDirectory) {
+                requestElevatedLaunch('explorer', 'trustedinstaller');
               } else {
-                requestElevatedLaunch('terminal', 'trustedinstaller');
+                requestElevatedLaunch('notepad', 'trustedinstaller', { fileId: f.id });
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const f = fileContextMenu.file!;
+              closeAllMenus();
+              if (f.isDirectory) {
+                requestElevatedLaunch('explorer', 'trustedinstaller');
+              } else {
+                requestElevatedLaunch('notepad', 'trustedinstaller', { fileId: f.id });
               }
             }}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-amber-500 hover:bg-amber-500/10 text-left font-semibold cursor-pointer"
           >
             <ShieldCheck size={13} />
-            <span>Запуск с правами (TrustedInstaller)</span>
+            <span>Запуск с правами TrustedInstaller</span>
           </button>
 
           <div className="h-px bg-zinc-500/15 my-1" />
@@ -791,6 +908,10 @@ export const Desktop: React.FC = () => {
           {/* Rename File */}
           <button
             onClick={() => handleStartRename(fileContextMenu.file!)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              handleStartRename(fileContextMenu.file!);
+            }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-zinc-500/10 text-left cursor-pointer"
           >
             <Edit2 size={13} />
@@ -800,6 +921,12 @@ export const Desktop: React.FC = () => {
           {/* Delete File */}
           <button
             onClick={() => {
+              const f = fileContextMenu.file!;
+              closeAllMenus();
+              deleteItemChecked(f.id);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               const f = fileContextMenu.file!;
               closeAllMenus();
               deleteItemChecked(f.id);
@@ -819,6 +946,12 @@ export const Desktop: React.FC = () => {
               closeAllMenus();
               openPropertiesDialog(f.id);
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const f = fileContextMenu.file!;
+              closeAllMenus();
+              openPropertiesDialog(f.id);
+            }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-zinc-500/10 text-left font-medium cursor-pointer"
           >
             <Settings size={13} />
@@ -831,7 +964,9 @@ export const Desktop: React.FC = () => {
       {appContextMenu.visible && appContextMenu.app && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className={`fixed z-50 w-64 rounded-xl border shadow-2xl p-1.5 win-acrylic text-xs select-none animate-in zoom-in-95 duration-100 ${
+          onPointerDown={(e) => e.stopPropagation()}
+          onContextMenu={(e) => e.preventDefault()}
+          className={`desktop-context-menu fixed z-50 w-64 rounded-xl border shadow-2xl p-1.5 win-acrylic text-xs select-none animate-in zoom-in-95 duration-100 ${
             isDark ? 'bg-zinc-800/95 border-zinc-700 text-zinc-100' : 'bg-white/95 border-slate-200 text-zinc-900'
           }`}
           style={{ left: `${appContextMenu.x}px`, top: `${appContextMenu.y}px` }}
@@ -839,6 +974,12 @@ export const Desktop: React.FC = () => {
           {/* Open */}
           <button
             onClick={() => {
+              const a = appContextMenu.app!;
+              closeAllMenus();
+              openWindow(a.id);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               const a = appContextMenu.app!;
               closeAllMenus();
               openWindow(a.id);
@@ -851,9 +992,24 @@ export const Desktop: React.FC = () => {
 
           <div className="h-px bg-zinc-500/15 my-1" />
 
-          {/* Elevated Launches */}
-          <div className="px-3 py-0.5 text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
-            Запуск с правами
+          {/* Elevated Launches Header - Clickable */}
+          <div
+            onClick={() => {
+              const a = appContextMenu.app!;
+              closeAllMenus();
+              requestElevatedLaunch(a.id, 'admin');
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const a = appContextMenu.app!;
+              closeAllMenus();
+              requestElevatedLaunch(a.id, 'admin');
+            }}
+            className="flex items-center justify-between px-3 py-1 text-[10px] text-zinc-400 font-semibold uppercase tracking-wider hover:bg-zinc-500/10 rounded cursor-pointer group"
+            title="Быстрый запуск от имени администратора"
+          >
+            <span>Запуск с правами</span>
+            <Shield size={12} className="text-blue-400 group-hover:scale-110 transition-transform" />
           </div>
 
           <button
@@ -862,7 +1018,13 @@ export const Desktop: React.FC = () => {
               closeAllMenus();
               requestElevatedLaunch(a.id, 'admin');
             }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 text-left cursor-pointer"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const a = appContextMenu.app!;
+              closeAllMenus();
+              requestElevatedLaunch(a.id, 'admin');
+            }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 text-left cursor-pointer font-medium"
           >
             <Shield size={13} />
             <span>Запуск от имени администратора</span>
@@ -874,7 +1036,13 @@ export const Desktop: React.FC = () => {
               closeAllMenus();
               requestElevatedLaunch(a.id, 'system');
             }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-purple-500 hover:bg-purple-500/10 text-left cursor-pointer"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const a = appContextMenu.app!;
+              closeAllMenus();
+              requestElevatedLaunch(a.id, 'system');
+            }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-purple-500 hover:bg-purple-500/10 text-left cursor-pointer font-medium"
           >
             <ShieldAlert size={13} />
             <span>Запуск от имени системы</span>
@@ -886,6 +1054,12 @@ export const Desktop: React.FC = () => {
               closeAllMenus();
               requestElevatedLaunch(a.id, 'trustedinstaller');
             }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const a = appContextMenu.app!;
+              closeAllMenus();
+              requestElevatedLaunch(a.id, 'trustedinstaller');
+            }}
             className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-amber-500 hover:bg-amber-500/10 text-left font-semibold cursor-pointer"
           >
             <ShieldCheck size={13} />
@@ -893,31 +1067,6 @@ export const Desktop: React.FC = () => {
           </button>
         </div>
       )}
-
-      {/* SYSTEM SECURITY & ACCESS DIALOGS */}
-      {/* 1. File Properties & Security Dialog (ACL, Owner, Principals) */}
-      <FilePropertiesDialog
-        fileId={propertiesDialogFileId}
-        onClose={closePropertiesDialog}
-      />
-
-      {/* 2. Security Error / Access Denied Dialog */}
-      <SecurityErrorDialog
-        isOpen={!!securityModal?.visible}
-        title={securityModal?.title}
-        message={securityModal?.message || ''}
-        fileId={securityModal?.fileId}
-        onClose={closeSecurityModal}
-      />
-
-      {/* 3. UAC (User Account Control) Prompt Dialog */}
-      <UacDialog
-        isOpen={!!uacRequest}
-        appName={uacAppName}
-        elevationLevel={uacRequest?.level || 'admin'}
-        onConfirm={confirmUac}
-        onCancel={cancelUac}
-      />
     </div>
   );
 };

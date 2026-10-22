@@ -478,10 +478,17 @@ export const FileExplorer: React.FC = () => {
             isDark ? 'bg-zinc-800/95 border-zinc-700 text-zinc-100' : 'bg-white/95 border-slate-200 text-zinc-900'
           }`}
           style={{ left: `${contextMenu.x}px`, top: `${contextMenu.y}px` }}
+          onContextMenu={(e) => e.preventDefault()}
         >
           {/* Open */}
           <button
             onClick={() => {
+              const itm = contextMenu.item!;
+              closeContextMenu();
+              handleDoubleClick(itm);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               const itm = contextMenu.item!;
               closeContextMenu();
               handleDoubleClick(itm);
@@ -494,10 +501,34 @@ export const FileExplorer: React.FC = () => {
 
           <div className="h-px bg-zinc-500/15 my-1" />
 
-          {/* Elevated Launches */}
-          <div className="px-3 py-0.5 text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
-            Запуск с правами
+          {/* Elevated Launches Header - Clickable for fast admin elevation */}
+          <div
+            onClick={() => {
+              const itm = contextMenu.item!;
+              closeContextMenu();
+              if (itm.name.endsWith('.txt')) {
+                requestElevatedLaunch('notepad', 'admin', { fileId: itm.id });
+              } else {
+                requestElevatedLaunch('terminal', 'admin');
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const itm = contextMenu.item!;
+              closeContextMenu();
+              if (itm.name.endsWith('.txt')) {
+                requestElevatedLaunch('notepad', 'admin', { fileId: itm.id });
+              } else {
+                requestElevatedLaunch('terminal', 'admin');
+              }
+            }}
+            className="flex items-center justify-between px-3 py-1 text-[10px] text-zinc-400 font-semibold uppercase tracking-wider hover:bg-zinc-500/10 rounded cursor-pointer group"
+            title="Быстрый запуск от имени администратора"
+          >
+            <span>Запуск с правами</span>
+            <Shield size={12} className="text-blue-400 group-hover:scale-110 transition-transform" />
           </div>
+
           <button
             onClick={() => {
               const itm = contextMenu.item!;
@@ -508,7 +539,17 @@ export const FileExplorer: React.FC = () => {
                 requestElevatedLaunch('terminal', 'admin');
               }
             }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 text-left cursor-pointer"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const itm = contextMenu.item!;
+              closeContextMenu();
+              if (itm.name.endsWith('.txt')) {
+                requestElevatedLaunch('notepad', 'admin', { fileId: itm.id });
+              } else {
+                requestElevatedLaunch('terminal', 'admin');
+              }
+            }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-blue-500 hover:bg-blue-500/10 text-left cursor-pointer font-medium"
           >
             <Shield size={13} />
             <span>Запуск от имени администратора</span>
@@ -524,7 +565,17 @@ export const FileExplorer: React.FC = () => {
                 requestElevatedLaunch('terminal', 'system');
               }
             }}
-            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-purple-500 hover:bg-purple-500/10 text-left cursor-pointer"
+            onContextMenu={(e) => {
+              e.preventDefault();
+              const itm = contextMenu.item!;
+              closeContextMenu();
+              if (itm.name.endsWith('.txt')) {
+                requestElevatedLaunch('notepad', 'system', { fileId: itm.id });
+              } else {
+                requestElevatedLaunch('terminal', 'system');
+              }
+            }}
+            className="w-full flex items-center gap-2 px-3 py-1.5 rounded-lg text-purple-500 hover:bg-purple-500/10 text-left cursor-pointer font-medium"
           >
             <ShieldAlert size={13} />
             <span>Запуск от имени системы (SYSTEM)</span>
@@ -532,6 +583,16 @@ export const FileExplorer: React.FC = () => {
 
           <button
             onClick={() => {
+              const itm = contextMenu.item!;
+              closeContextMenu();
+              if (itm.name.endsWith('.txt')) {
+                requestElevatedLaunch('notepad', 'trustedinstaller', { fileId: itm.id });
+              } else {
+                requestElevatedLaunch('terminal', 'trustedinstaller');
+              }
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               const itm = contextMenu.item!;
               closeContextMenu();
               if (itm.name.endsWith('.txt')) {
@@ -551,6 +612,10 @@ export const FileExplorer: React.FC = () => {
           {/* Rename */}
           <button
             onClick={() => handleStartRename(contextMenu.item!)}
+            onContextMenu={(e) => {
+              e.preventDefault();
+              handleStartRename(contextMenu.item!);
+            }}
             className="w-full flex items-center gap-2.5 px-3 py-1.5 rounded-lg hover:bg-zinc-500/10 text-left cursor-pointer"
           >
             <Edit2 size={13} />
@@ -560,6 +625,12 @@ export const FileExplorer: React.FC = () => {
           {/* Delete */}
           <button
             onClick={() => {
+              const itm = contextMenu.item!;
+              closeContextMenu();
+              deleteItemChecked(itm.id);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               const itm = contextMenu.item!;
               closeContextMenu();
               deleteItemChecked(itm.id);
@@ -575,6 +646,12 @@ export const FileExplorer: React.FC = () => {
           {/* Properties */}
           <button
             onClick={() => {
+              const itm = contextMenu.item!;
+              closeContextMenu();
+              openPropertiesDialog(itm.id);
+            }}
+            onContextMenu={(e) => {
+              e.preventDefault();
               const itm = contextMenu.item!;
               closeContextMenu();
               openPropertiesDialog(itm.id);

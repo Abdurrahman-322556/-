@@ -19,10 +19,24 @@ import { RebootScreen } from './components/system/RebootScreen';
 import { LockScreen } from './components/system/LockScreen';
 import { UpdateScreen } from './components/system/UpdateScreen';
 import { StartupSettingsScreen } from './components/system/StartupSettingsScreen';
+import { UacDialog } from './components/dialogs/UacDialog';
+import { SecurityErrorDialog } from './components/dialogs/SecurityErrorDialog';
+import { FilePropertiesDialog } from './components/dialogs/FilePropertiesDialog';
 import { playSound } from './utils/sound';
 
 const Windows11OS: React.FC = () => {
-  const { systemStatus, settings } = useSystem();
+  const {
+    systemStatus,
+    settings,
+    uacRequest,
+    confirmUac,
+    cancelUac,
+    apps,
+    securityModal,
+    closeSecurityModal,
+    propertiesDialogFileId,
+    closePropertiesDialog,
+  } = useSystem();
 
   const [isStartOpen, setIsStartOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -141,6 +155,28 @@ const Windows11OS: React.FC = () => {
           setIsQuickSettingsOpen(false);
         }}
         isCalendarOpen={isCalendarOpen}
+      />
+
+      {/* Root-Level System Security & UAC Modals */}
+      <FilePropertiesDialog
+        fileId={propertiesDialogFileId}
+        onClose={closePropertiesDialog}
+      />
+
+      <SecurityErrorDialog
+        isOpen={!!securityModal?.visible}
+        title={securityModal?.title}
+        message={securityModal?.message || ''}
+        fileId={securityModal?.fileId}
+        onClose={closeSecurityModal}
+      />
+
+      <UacDialog
+        isOpen={!!uacRequest}
+        appName={apps.find((a) => a.id === uacRequest?.appId)?.name || uacRequest?.appId || 'Системный компонент'}
+        elevationLevel={uacRequest?.level || 'admin'}
+        onConfirm={confirmUac}
+        onCancel={cancelUac}
       />
     </div>
   );
